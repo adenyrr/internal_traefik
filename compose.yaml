@@ -12,7 +12,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./acme.json:/acme.json
-      - ./certs/ca.crt:/certs/ca.crt:ro
+      - ./certs:/certs:ro
     environment:
       # ── Général ───────────────────────────────────────────────────────────
 
