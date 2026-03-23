@@ -1,0 +1,75 @@
+name: traefik
+services:
+  traefik:
+    image: traefik:v3.3
+    container_name: traefik
+    restart: unless-stopped
+    networks:
+      - traefik
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./acme.json:/acme.json
+      - ./certs/ca.crt:/certs/ca.crt:ro
+    environment:
+      # ── Général ───────────────────────────────────────────────────────────
+
+      TRAEFIK_GLOBAL_CHECKNEWVERSION: "false"
+      TRAEFIK_GLOBAL_SENDANONYMOUSUSAGE: "false"
+
+      # ── Logs ──────────────────────────────────────────────────────────────
+
+      TRAEFIK_LOG_LEVEL: "INFO"
+      TRAEFIK_LOG_FORMAT: "common"
+      TRAEFIK_ACCESSLOG: "false"
+
+      # ── API (sans dashboard) ───────────────────────────────────────────────
+
+      TRAEFIK_API: "true"
+      TRAEFIK_API_DASHBOARD: "false"
+      TRAEFIK_API_INSECURE: "false"
+
+      # ── Entrypoints ────────────────────────────────────────────────────────
+
+      TRAEFIK_ENTRYPOINTS_WEB_ADDRESS: ":80"
+      TRAEFIK_ENTRYPOINTS_WEB_HTTP_REDIRECTIONS_ENTRYPOINT_TO: "websecure"
+      TRAEFIK_ENTRYPOINTS_WEB_HTTP_REDIRECTIONS_ENTRYPOINT_SCHEME: "https"
+      TRAEFIK_ENTRYPOINTS_WEBSECURE_ADDRESS: ":443"
+
+      # ── Provider Docker ────────────────────────────────────────────────────
+
+      TRAEFIK_PROVIDERS_DOCKER: "true"
+      TRAEFIK_PROVIDERS_DOCKER_ENDPOINT: "unix:///var/run/docker.sock"
+      TRAEFIK_PROVIDERS_DOCKER_EXPOSEDBYDEFAULT: "false"
+      TRAEFIK_PROVIDERS_DOCKER_NETWORK: "traefik"
+
+      # ── ACME / PKI interne ─────────────────────────────────────────────────
+
+      TRAEFIK_CERTIFICATESRESOLVERS_INTERNAL_ACME_EMAIL: "${ACME_EMAIL}"
+      TRAEFIK_CERTIFICATESRESOLVERS_INTERNAL_ACME_STORAGE: "/acme.json"
+      TRAEFIK_CERTIFICATESRESOLVERS_INTERNAL_ACME_CASERVER: "${ACME_URL}"
+      TRAEFIK_CERTIFICATESRESOLVERS_INTERNAL_ACME_CERTIFICATEAUTHOITY: "/certs/ca.crt"
+      TRAEFIK_CERTIFICATESRESOLVERS_INTERNAL_ACME_HTTPCHALLENGE: "true"
+      TRAEFIK_CERTIFICATESRESOLVERS_INTERNAL_ACME_HTTPCHALLENGE_ENTRYPOINT: "web"
+
+      # ── Métriques Prometheus ───────────────────────────────────────────────
+
+      TRAEFIK_METRICS_PROMETHEUS: "true"
+      TRAEFIK_METRICS_PROMETHEUS_ADDENTRYPOINTSLABELS: "true"
+      TRAEFIK_METRICS_PROMETHEUS_ADDSERVICESLABELS: "true"
+      TRAEFIK_METRICS_PROMETHEUS_ADDROUTERSLABELS: "true"
+
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.traefik-api.rule: "Host(`${TRAEFIK_HOST}`) && PathPrefix(`/api`)"
+      traefik.http.routers.traefik-api.entrypoints: "websecure"
+      traefik.http.routers.traefik-api.tls.certresolver: "internal"
+      traefik.http.routers.traefik-api.service: "api@internal"
+
+
+networks:
+  traefik:
+    name: traefik
+    external: false
