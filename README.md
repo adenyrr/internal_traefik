@@ -12,7 +12,11 @@ Ce repo contient uniquement le traefik déployé sur chaque stack.
 
 ## Cloner le dépot
 
+git clone 
+
 ## Définir les permissions
+
+mkdir -p ./data && touch ./data/acme.json && chmod 600 ./data/acme.json
 
 # Variables à définir :
 
