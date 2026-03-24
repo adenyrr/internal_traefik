@@ -12,6 +12,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./certs:/certs:ro
+      - ./data:/data
     environment:
       # ── Général ───────────────────────────────────────────────────────────
 
