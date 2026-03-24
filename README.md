@@ -6,7 +6,7 @@ Ce repo contient uniquement le traefik déployé sur chaque stack.
 
 # Schéma d'infrastructure
 
-![Schéma d'infrastructure](assets/infra_diagram.png)
+![Schéma d'infrastructure](./diagram.svg)
 
 # Configuration :
 
