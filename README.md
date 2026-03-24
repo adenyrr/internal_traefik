@@ -8,6 +8,12 @@ Ce repo contient uniquement le traefik déployé sur chaque stack.
 
 ![Schéma d'infrastructure](assets/infra_diagram.png)
 
+# Utilisation :
+
+## Cloner le dépot
+
+## Définir les permissions
+
 # Variables à définir :
 
 TRAEFIK_HOST : URL de contact pour les metrics et l'api traefik
