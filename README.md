@@ -69,14 +69,8 @@ ACME_EMAIL : mail associé à la PKI
 ## Récupérer la root-ca pour la chaine de confiance
 
 ```sh
-# Debian/Ubuntu
-apt install -y jq
-# Alpine
-apk add jq
 mkdir certs/
-wget -q --no-check-certificate -O - https://acme.<domain>.internal/acme/acme/root \
-  | jq -r '.certificate' \
-  > ./certs/ca.crt
+wget -q --no-check-certificate -O /certs/ca.crt https://acme.<domain>/roots.pem
 
 ```
 
