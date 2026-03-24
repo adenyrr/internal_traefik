@@ -6,7 +6,44 @@ Ce repo contient uniquement le traefik déployé sur chaque stack.
 
 # Schéma d'infrastructure
 
-![Schéma d'infrastructure](./diagram.svg)
+```mermaid
+flowchart LR
+    subgraph Internet
+        A[Internet]
+    end
+
+    subgraph Perimeter
+        B[Pare-Feu]
+    end
+
+    subgraph WebServer
+        C[Nginx]
+    end
+
+    subgraph LoadBalancer
+        D[Traefik<br/>médias]
+        E[Traefik<br/>cloud]
+    end
+
+    A -- HTTPS (443) --> B
+    B -- HTTPS (443) --> C
+    C -- HTTPS (443) --> D
+    C -- HTTPS (443) --> E
+
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style B fill:#bbf,stroke:#333,stroke-width:2px
+    style C fill:#bbf,stroke:#333,stroke-width:2px
+    style D fill:#bfb,stroke:#333,stroke-width:2px
+    style E fill:#bfb,stroke:#333,stroke-width:2px
+
+    classDef firewall fill:#e1f5fe,stroke:#01579b;
+    classDef server fill:#fff3e0,stroke:#e65100;
+    classDef traefik fill:#e8f5e9,stroke:#1b5e20;
+
+    class B firewall;
+    class C server;
+    class D,E traefik;
+```
 
 # Configuration :
 
