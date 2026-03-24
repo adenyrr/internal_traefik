@@ -37,7 +37,7 @@ apt install -y jq
 # Alpine
 apk add jq
 mkdir certs/
-wget -q --no-check-certificate -O - https://acme.domain.internal/acme/acme/root \
+wget -q --no-check-certificate -O - https://acme.<domain>.internal/acme/acme/root \
   | jq -r '.certificate' \
   > ./certs/ca.crt
 
