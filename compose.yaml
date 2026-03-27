@@ -18,6 +18,9 @@ services:
       # ── Général ───────────────────────────────────────────────────────────
       TRAEFIK_GLOBAL_CHECKNEWVERSION: "false"
       TRAEFIK_GLOBAL_SENDANONYMOUSUSAGE: "false"
+      # ── Transport ─────────────────────────────────────────────────────────
+      TRAEFIK_TRANSPORT_RESPONDINGTIMEOUTS_READTIMEOUT: "900s"
+      TRAEFIK_TRANSPORT_RESPONDINGTIMEOUTS_IDLETIMEOUT: "900s"
       # ── Logs ──────────────────────────────────────────────────────────────
       TRAEFIK_LOG_LEVEL: "INFO"
       TRAEFIK_LOG_FORMAT: "common"
