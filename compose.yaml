@@ -15,48 +15,53 @@ services:
       - ./certs:/certs:ro
       - ./data:/data
     environment:
-      # ── Général ───────────────────────────────────────────────────────────
-      TRAEFIK_GLOBAL_CHECKNEWVERSION: "false"
-      TRAEFIK_GLOBAL_SENDANONYMOUSUSAGE: "false"
-      # ── Transport ─────────────────────────────────────────────────────────
-      TRAEFIK_TRANSPORT_RESPONDINGTIMEOUTS_READTIMEOUT: "900s"
-      TRAEFIK_TRANSPORT_RESPONDINGTIMEOUTS_IDLETIMEOUT: "900s"
-      # ── Logs ──────────────────────────────────────────────────────────────
-      TRAEFIK_LOG_LEVEL: "INFO"
-      TRAEFIK_LOG_FORMAT: "common"
-      TRAEFIK_ACCESSLOG: "false"
-      # ── API ───────────────────────────────────────────────────────────────
-      TRAEFIK_API: "true"
-      TRAEFIK_API_DASHBOARD: "false"
-      TRAEFIK_API_INSECURE: "false"
-      # ── Entrypoints ────────────────────────────────────────────────────────
-      TRAEFIK_ENTRYPOINTS_WEB_ADDRESS: ":80"
-      TRAEFIK_ENTRYPOINTS_WEB_HTTP_REDIRECTIONS_ENTRYPOINT_TO: "websecure"
-      TRAEFIK_ENTRYPOINTS_WEB_HTTP_REDIRECTIONS_ENTRYPOINT_SCHEME: "https"
-      TRAEFIK_ENTRYPOINTS_WEBSECURE_ADDRESS: ":443"
-      TRAEFIK_ENTRYPOINTS_WEBSECURE_HTTP_TLS_CERTRESOLVER: "internal"
-      # ── Provider Docker ────────────────────────────────────────────────────
-      TRAEFIK_PROVIDERS_DOCKER: "true"
-      TRAEFIK_PROVIDERS_DOCKER_ENDPOINT: "unix:///var/run/docker.sock"
-      TRAEFIK_PROVIDERS_DOCKER_EXPOSEDBYDEFAULT: "false"
-      TRAEFIK_PROVIDERS_DOCKER_NETWORK: "traefik"
-      # ── ACME / PKI interne ─────────────────────────────────────────────────
-      TRAEFIK_CERTIFICATESRESOLVERS_INTERNAL_ACME_EMAIL: "${ACME_EMAIL}"
-      TRAEFIK_CERTIFICATESRESOLVERS_INTERNAL_ACME_STORAGE: "/data/acme.json"
-      TRAEFIK_CERTIFICATESRESOLVERS_INTERNAL_ACME_CASERVER: "${ACME_URL}"
-      TRAEFIK_CERTIFICATESRESOLVERS_INTERNAL_ACME_CACERTIFICATES: "/certs/ca.crt"
-      TRAEFIK_CERTIFICATESRESOLVERS_INTERNAL_ACME_TLSCHALLENGE: "true"
-      # ── Métriques Prometheus ───────────────────────────────────────────────
-      TRAEFIK_METRICS_PROMETHEUS: "true"
-      TRAEFIK_METRICS_PROMETHEUS_ADDENTRYPOINTSLABELS: "true"
-      TRAEFIK_METRICS_PROMETHEUS_ADDSERVICESLABELS: "true"
-      TRAEFIK_METRICS_PROMETHEUS_ADDROUTERSLABELS: "true"
-    labels:
-      traefik.enable: "true"
-      traefik.http.routers.traefik-api.rule: "Host(`${TRAEFIK_HOST}`) && PathPrefix(`/api`)"
-      traefik.http.routers.traefik-api.entrypoints: "websecure"
-      traefik.http.routers.traefik-api.tls.certresolver: "internal"
-      traefik.http.routers.traefik-api.service: "api@internal"
+environment:
+  # ── Général ───────────────────────────────────────────────────────────
+  TRAEFIK_GLOBAL_CHECKNEWVERSION: "false"
+  TRAEFIK_GLOBAL_SENDANONYMOUSUSAGE: "false"
+  # ── Transport ─────────────────────────────────────────────────────────
+  TRAEFIK_TRANSPORT_RESPONDINGTIMEOUTS_READTIMEOUT: "900s"
+  TRAEFIK_TRANSPORT_RESPONDINGTIMEOUTS_IDLETIMEOUT: "900s"
+  # ── Logs ──────────────────────────────────────────────────────────────
+  TRAEFIK_LOG_LEVEL: "INFO"
+  TRAEFIK_LOG_FORMAT: "common"
+  TRAEFIK_ACCESSLOG: "false"
+  # ── API ───────────────────────────────────────────────────────────────
+  TRAEFIK_API: "true"
+  TRAEFIK_API_DASHBOARD: "false"
+  TRAEFIK_API_INSECURE: "false"
+  # ── Entrypoints ────────────────────────────────────────────────────────
+  TRAEFIK_ENTRYPOINTS_WEB_ADDRESS: ":80"
+  TRAEFIK_ENTRYPOINTS_WEB_HTTP_REDIRECTIONS_ENTRYPOINT_TO: "websecure"
+  TRAEFIK_ENTRYPOINTS_WEB_HTTP_REDIRECTIONS_ENTRYPOINT_SCHEME: "https"
+  TRAEFIK_ENTRYPOINTS_WEBSECURE_ADDRESS: ":443"
+  TRAEFIK_ENTRYPOINTS_WEBSECURE_HTTP_TLS_CERTRESOLVER: "letsencrypt"
+  # ── Provider Docker ────────────────────────────────────────────────────
+  TRAEFIK_PROVIDERS_DOCKER: "true"
+  TRAEFIK_PROVIDERS_DOCKER_ENDPOINT: "unix:///var/run/docker.sock"
+  TRAEFIK_PROVIDERS_DOCKER_EXPOSEDBYDEFAULT: "false"
+  TRAEFIK_PROVIDERS_DOCKER_NETWORK: "traefik"
+  # ── ACME / Let's Encrypt DNS-01 Cloudflare ─────────────────────────────
+  TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_EMAIL: "${ACME_EMAIL}"
+  TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_STORAGE: "/data/acme.json"
+  TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_CASERVER: "https://acme-v02.api.letsencrypt.org/directory"
+  TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_DNSCHALLENGE: "true"
+  TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_DNSCHALLENGE_PROVIDER: "cloudflare"
+  TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_DNSCHALLENGE_RESOLVERS: "1.1.1.1:53,8.8.8.8:53"
+  # ── Métriques Prometheus ───────────────────────────────────────────────
+  TRAEFIK_METRICS_PROMETHEUS: "true"
+  TRAEFIK_METRICS_PROMETHEUS_ADDENTRYPOINTSLABELS: "true"
+  TRAEFIK_METRICS_PROMETHEUS_ADDSERVICESLABELS: "true"
+  TRAEFIK_METRICS_PROMETHEUS_ADDROUTERSLABELS: "true"
+  # ── Cloudflare credentials ─────────────────────────────────────────────
+  CF_DNS_API_TOKEN: "${CF_DNS_API_TOKEN}"
+
+labels:
+  traefik.enable: "true"
+  traefik.http.routers.traefik-api.rule: "Host(`${TRAEFIK_HOST}`) && PathPrefix(`/api`)"
+  traefik.http.routers.traefik-api.entrypoints: "websecure"
+  traefik.http.routers.traefik-api.tls.certresolver: "letsencrypt"
+  traefik.http.routers.traefik-api.service: "api@internal"
 
 networks:
   traefik:
