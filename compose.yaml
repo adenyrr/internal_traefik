@@ -27,7 +27,7 @@ services:
       # ── Logs ──────────────────────────────────────────────────────────────
       TRAEFIK_LOG_LEVEL: "INFO"
       TRAEFIK_LOG_FORMAT: "common"
-      TRAEFIK_ACCESSLOG: "false"
+      TRAEFIK_ACCESSLOG: "true"
       # ── API ───────────────────────────────────────────────────────────────
       TRAEFIK_API: "true"
       TRAEFIK_API_DASHBOARD: "false"
