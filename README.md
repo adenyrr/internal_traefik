@@ -63,8 +63,11 @@ mkdir -p ./data && touch ./data/acme.json && chmod 600 ./data/acme.json
 cp example.env .env && nano .env
 ```
 TRAEFIK_HOST : URL de contact pour les metrics et l'api traefik
-ACME_URL : URL du serveur ACME de la PKI
 ACME_EMAIL : mail associé à la PKI
+SOCKET : chemin du socket Docker
+SOCKET_UID : UID propriétaire du socket Docker (1001 par défaut)
+EXTERNAL_PROXY : IP ou réseau du proxy externe de confiance
+CF_DNS_API_TOKEN : token API Cloudflare utilisé pour le challenge DNS-01
 
 ## Récupérer la root-ca pour la chaine de confiance
 
@@ -108,4 +111,3 @@ Pour exposer un service *sur la même machine que le proxy*, il suffit d'ajouter
 # Licence
 
 Stack by adenyrr, CC - BY - NC
-

@@ -1,17 +1,36 @@
-name: internal_traefik
+name: external_traefik
 
 services:
+  socket-proxy:
+    image: tecnativa/docker-socket-proxy:0.1.2
+    container_name: traefik-socket-proxy
+    restart: unless-stopped
+    user: "${SOCKET_UID:-1001}"
+    networks:
+      - socket-proxy
+    volumes:
+      - ${SOCKET}:/var/run/docker.sock:ro
+    environment:
+      CONTAINERS: "1"
+      EVENTS: "1"
+      INFO: "1"
+      NETWORKS: "1"
+      PING: "1"
+      VERSION: "1"
+
   traefik:
     image: traefik:v3.6
     container_name: traefik
     restart: unless-stopped
+    depends_on:
+      - socket-proxy
     networks:
       - traefik
+      - socket-proxy
     ports:
       - "8080:80"
       - "8443:443"
     volumes:
-      - ${SOCKET}:/var/run/docker.sock:ro
       - ./certs:/certs:ro
       - ./data:/data
     environment:
@@ -40,7 +59,7 @@ services:
       TRAEFIK_ENTRYPOINTS_WEBSECURE_HTTP_TLS_CERTRESOLVER: "letsencrypt"
       # ── Provider Docker ────────────────────────────────────────────────────
       TRAEFIK_PROVIDERS_DOCKER: "true"
-      TRAEFIK_PROVIDERS_DOCKER_ENDPOINT: "unix:///var/run/docker.sock"
+      TRAEFIK_PROVIDERS_DOCKER_ENDPOINT: "tcp://socket-proxy:2375"
       TRAEFIK_PROVIDERS_DOCKER_EXPOSEDBYDEFAULT: "false"
       TRAEFIK_PROVIDERS_DOCKER_NETWORK: "traefik"
       # ── ACME / Let's Encrypt DNS-01 Cloudflare ─────────────────────────────
@@ -69,3 +88,6 @@ networks:
   traefik:
     name: traefik
     external: false
+  socket-proxy:
+    name: traefik-socket-proxy
+    internal: true
