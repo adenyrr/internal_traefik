@@ -2,87 +2,147 @@ name: external_traefik
 
 services:
   socket-proxy:
-    image: tecnativa/docker-socket-proxy:0.1.2
+    image: ghcr.io/tecnativa/docker-socket-proxy:v0.5.0@sha256:1f5038b54f06c3e18422902cf00ba21803d1c97805aae032e5e6673d532d3459
     container_name: traefik-socket-proxy
     restart: unless-stopped
-    user: "${SOCKET_UID:-1001}"
+    # Docker rootless : UID 0 dans le conteneur = deploy (1001) sur l'hôte.
+    user: "0:0"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m,mode=1777
+      - /run:rw,noexec,nosuid,size=1m,mode=755
     networks:
       - socket-proxy
     volumes:
-      - ${SOCKET}:/var/run/docker.sock:ro
+      - type: bind
+        source: ${SOCKET:-/run/user/1001/docker.sock}
+        target: /var/run/docker.sock
+        read_only: true
+        bind:
+          create_host_path: false
     environment:
       CONTAINERS: "1"
       EVENTS: "1"
-      INFO: "1"
-      NETWORKS: "1"
+      INFO: "0"
+      NETWORKS: "0"
       PING: "1"
       VERSION: "1"
+      POST: "0"
+      ALLOW_START: "0"
+      ALLOW_STOP: "0"
+      ALLOW_RESTARTS: "0"
+      ALLOW_PAUSE: "0"
+      ALLOW_UNPAUSE: "0"
+      DISABLE_IPV6: "1"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-T", "3", "-O", "/dev/null", "http://127.0.0.1:2375/_ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
 
   traefik:
-    image: traefik:v3.6
+    image: traefik:v3.6.25@sha256:31267173a15b4944e797a76ffd9c419707c8d8b32fe5b610f80cd0cfa05f372d
     container_name: traefik
     restart: unless-stopped
+    user: "0:0"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m,mode=1777
     depends_on:
-      - socket-proxy
+      socket-proxy:
+        condition: service_healthy
     networks:
       - traefik
       - socket-proxy
     ports:
-      - "8080:80"
-      - "8443:443"
+      - "${BIND_IP:?Définir BIND_IP : interface privée joignable depuis BunkerWeb}:${HTTP_PORT:-8080}:8080"
+      - "${BIND_IP:?Définir BIND_IP : interface privée joignable depuis BunkerWeb}:${HTTPS_PORT:-8443}:8443"
     volumes:
-      - ./certs:/certs:ro
-      - ./data:/data
+      - type: bind
+        source: ./data
+        target: /data
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./dynamic
+        target: /etc/traefik/dynamic
+        read_only: true
+        bind:
+          create_host_path: false
     environment:
       # ── Général ───────────────────────────────────────────────────────────
       TRAEFIK_GLOBAL_CHECKNEWVERSION: "false"
       TRAEFIK_GLOBAL_SENDANONYMOUSUSAGE: "false"
       # ── Transport ─────────────────────────────────────────────────────────
       TRAEFIK_ENTRYPOINTS_WEBSECURE_TRANSPORT_RESPONDINGTIMEOUTS_READTIMEOUT: "3600s"
-      TRAEFIK_ENTRYPOINTS_WEBSECURE_TRANSPORT_RESPONDINGTIMEOUTS_WRITETIMEOUT: "3600s"
+      # Ne pas interrompre les flux vidéo longs.
+      TRAEFIK_ENTRYPOINTS_WEBSECURE_TRANSPORT_RESPONDINGTIMEOUTS_WRITETIMEOUT: "0s"
       TRAEFIK_ENTRYPOINTS_WEBSECURE_TRANSPORT_RESPONDINGTIMEOUTS_IDLETIMEOUT: "3600s"
-      TRAEFIK_ENTRYPOINTS_WEBSECURE_FORWARDEDHEADERS_TRUSTEDIPS: "${EXTERNAL_PROXY}"
+      TRAEFIK_ENTRYPOINTS_WEBSECURE_FORWARDEDHEADERS_TRUSTEDIPS: "${EXTERNAL_PROXY:?Définir les IP/CIDR de BunkerWeb dans EXTERNAL_PROXY}"
       TRAEFIK_ENTRYPOINTS_WEBSECURE_FORWARDEDHEADERS_INSECURE: "false"
       # ── Logs ──────────────────────────────────────────────────────────────
       TRAEFIK_LOG_LEVEL: "INFO"
       TRAEFIK_LOG_FORMAT: "common"
       TRAEFIK_ACCESSLOG: "true"
+      # Les URL de certains services (Jellyfin notamment) contiennent des jetons.
+      TRAEFIK_ACCESSLOG_FIELDS_NAMES_REQUESTPATH: "drop"
+      TRAEFIK_ACCESSLOG_FIELDS_NAMES_REQUESTLINE: "drop"
+      TRAEFIK_ACCESSLOG_FIELDS_NAMES_REQUESTADDR: "drop"
+      TRAEFIK_PING: "true"
+      TRAEFIK_PING_ENTRYPOINT: "health"
+      TRAEFIK_ENTRYPOINTS_HEALTH_ADDRESS: ":8082"
       # ── API ───────────────────────────────────────────────────────────────
       TRAEFIK_API: "true"
       TRAEFIK_API_DASHBOARD: "false"
       TRAEFIK_API_INSECURE: "false"
       # ── Entrypoints ────────────────────────────────────────────────────────
-      TRAEFIK_ENTRYPOINTS_WEB_ADDRESS: ":80"
-      TRAEFIK_ENTRYPOINTS_WEB_HTTP_REDIRECTIONS_ENTRYPOINT_TO: "websecure"
+      TRAEFIK_ENTRYPOINTS_WEB_ADDRESS: ":8080"
+      TRAEFIK_ENTRYPOINTS_WEB_HTTP_REDIRECTIONS_ENTRYPOINT_TO: ":${PUBLIC_HTTPS_PORT:-443}"
       TRAEFIK_ENTRYPOINTS_WEB_HTTP_REDIRECTIONS_ENTRYPOINT_SCHEME: "https"
-      TRAEFIK_ENTRYPOINTS_WEBSECURE_ADDRESS: ":443"
+      TRAEFIK_ENTRYPOINTS_WEBSECURE_ADDRESS: ":8443"
+      TRAEFIK_ENTRYPOINTS_WEBSECURE_ASDEFAULT: "true"
       TRAEFIK_ENTRYPOINTS_WEBSECURE_HTTP_TLS_CERTRESOLVER: "letsencrypt"
       # ── Provider Docker ────────────────────────────────────────────────────
       TRAEFIK_PROVIDERS_DOCKER: "true"
       TRAEFIK_PROVIDERS_DOCKER_ENDPOINT: "tcp://socket-proxy:2375"
       TRAEFIK_PROVIDERS_DOCKER_EXPOSEDBYDEFAULT: "false"
       TRAEFIK_PROVIDERS_DOCKER_NETWORK: "traefik"
+      # ── Authentik : outpost existant, accessible depuis le conteneur ────────
+      TRAEFIK_PROVIDERS_FILE_DIRECTORY: "/etc/traefik/dynamic"
+      TRAEFIK_PROVIDERS_FILE_WATCH: "true"
+      AUTHENTIK_OUTPOST_URL: "${AUTHENTIK_OUTPOST_URL:?Définir AUTHENTIK_OUTPOST_URL sans slash final}"
+      TRAEFIK_HOST: "${TRAEFIK_HOST:?Définir TRAEFIK_HOST dans .env}"
       # ── ACME / Let's Encrypt DNS-01 Cloudflare ─────────────────────────────
-      TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_EMAIL: "${ACME_EMAIL}"
+      TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_EMAIL: "${ACME_EMAIL:?Définir ACME_EMAIL dans .env}"
       TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_STORAGE: "/data/acme.json"
       TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_CASERVER: "https://acme-v02.api.letsencrypt.org/directory"
       TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_DNSCHALLENGE: "true"
       TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_DNSCHALLENGE_PROVIDER: "cloudflare"
       TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_DNSCHALLENGE_RESOLVERS: "1.1.1.1:53,8.8.8.8:53"
-      # ── Métriques Prometheus ───────────────────────────────────────────────
-      TRAEFIK_METRICS_PROMETHEUS: "true"
-      TRAEFIK_METRICS_PROMETHEUS_ADDENTRYPOINTSLABELS: "true"
-      TRAEFIK_METRICS_PROMETHEUS_ADDSERVICESLABELS: "true"
-      TRAEFIK_METRICS_PROMETHEUS_ADDROUTERSLABELS: "true"
       # ── Cloudflare credentials ─────────────────────────────────────────────
-      CF_DNS_API_TOKEN: "${CF_DNS_API_TOKEN}"
+      CF_DNS_API_TOKEN: "${CF_DNS_API_TOKEN:?Injecter CF_DNS_API_TOKEN via Komodo}"
+
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
     labels:
       traefik.enable: "true"
-      traefik.http.routers.traefik-api.rule: "Host(`${TRAEFIK_HOST}`) && PathPrefix(`/api`)"
+      traefik.http.routers.traefik-api.rule: "Host(`${TRAEFIK_HOST:?Définir TRAEFIK_HOST dans .env}`) && PathPrefix(`/api`)"
       traefik.http.routers.traefik-api.entrypoints: "websecure"
       traefik.http.routers.traefik-api.tls.certresolver: "letsencrypt"
       traefik.http.routers.traefik-api.service: "api@internal"
+      traefik.http.routers.traefik-api.middlewares: "authentik@file"
 
 networks:
   traefik:
